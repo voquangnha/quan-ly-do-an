@@ -167,23 +167,36 @@ if role == "Giáo viên":
 
     if choice == "➕ Thêm Nhóm Mới":
         st.header("➕ Thêm Nhóm Đồ Án / Tiểu Luận")
+        
         with st.form("form_them_nhom", clear_on_submit=True):
             col1, col2, col3 = st.columns(3)
-            with col1: khoa_nhap = st.text_input("Khóa (Vd: K70)")
-            with col2: lop_nhap = st.text_input("Lớp (Vd: SPA1)")
-            with col3: hp_nhap = st.text_input("Học phần (Vd: PPGD)")
+            with col1: khoa = st.text_input("Khóa (Vd: K2)")
+            with col2: lop = st.text_input("Lớp (Vd: KTĐK&TĐH)")
+            with col3: hoc_phan = st.text_input("Học phần (Vd:Đồ án 1)")
             
             ten_nhom = st.text_input("Tên Nhóm (Vd: Nhóm 1)")
+            
+            # --- Ô NHẬP DANH SÁCH SINH VIÊN (VỪA THÊM MỚI) ---
+            danh_sach_sv = st.text_area(
+                "Danh sách sinh viên (Họ và Tên - Mã SV):", 
+                placeholder="Ví dụ:\n1. Nguyễn Văn A - 20T1020111\n2. Trần Thị B - 20T1020112"
+            )
+            
             ten_de_tai = st.text_input("Tên đề tài / Hướng nghiên cứu")
             email_nhom = st.text_input("Email đại diện nhóm (Để nhận thông báo)")
-            ma_tc = st.text_input("Mã truy cập (Passcode cho sinh viên đăng nhập)")
-            link_doc = st.text_input("Link Google Docs (Quyền Editor để sinh viên làm bài chung)")
-            trang_thai = st.selectbox("Trạng thái", ["Mới bắt đầu", "Đang thực hiện", "Cần hỗ trợ", "Hoàn thành"])
+            passcode = st.text_input("Mã truy cập (Passcode cho sinh viên đăng nhập)")
+            link_docs = st.text_input("Link Google Docs (Quyền Editor để sinh viên làm bài chung)")
+            trang_thai = st.selectbox("Trạng thái", ["Mới bắt đầu", "Đang thực hiện", "Chờ nghiệm thu", "Đã hoàn thành"])
             
             if st.form_submit_button("Lưu thông tin Nhóm"):
-                new_id = len(ws_nhom.get_all_values())
-                ws_nhom.append_row([new_id, khoa_nhap, lop_nhap, hp_nhap, ten_nhom, ten_de_tai, email_nhom, ma_tc, link_doc, trang_thai])
-                st.success("Đã thêm nhóm thành công! Sinh viên có thể dùng Mã truy cập để đăng nhập.")
+                # Bắt buộc phải nhập Tên nhóm, Mã truy cập và Danh sách sinh viên
+                if ten_nhom and passcode and danh_sach_sv: 
+                    new_id = len(ws_nhom.get_all_values())
+                    # Lưu ý: danh_sach_sv được đẩy vào vị trí cuối cùng của hàng
+                    ws_nhom.append_row([new_id, khoa, lop, hoc_phan, ten_nhom, ten_de_tai, email_nhom, passcode, link_docs, trang_thai, danh_sach_sv])
+                    st.success(f"Đã thêm {ten_nhom} thành công!")
+                else:
+                    st.error("Vui lòng điền đầy đủ Tên nhóm, Mã truy cập và Danh sách sinh viên.")
 
     elif choice == "📢 Quản Lý Thông Báo":
         st.header("📢 Đăng Tải Thông Báo Chung")
