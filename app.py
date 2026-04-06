@@ -58,6 +58,28 @@ def get_worksheets():
 
 # Gọi hàm (Cập nhật lại dòng khai báo biến)
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
+# --- ẨN TRIỆT ĐỂ LOGO, MENU VÀ BIỂU TƯỢNG CỦA STREAMLIT ---
+hide_streamlit_style = """
+<style>
+/* Ẩn thanh công cụ góc trên bên phải (Fork, GitHub, Menu...) */
+[data-testid="stToolbar"] {display: none !important;}
+
+/* Ẩn dải Header trắng trên cùng */
+[data-testid="stHeader"] {display: none !important;}
+
+/* Ẩn chữ 'Made with Streamlit' ở dưới cùng */
+footer {display: none !important;}
+
+/* Ẩn cụm biểu tượng Manage App / Profile ở góc dưới cùng bên phải */
+[class^="viewerBadge"] {display: none !important;}
+.viewerBadge_container {display: none !important;}
+.viewerBadge_link {display: none !important;}
+
+/* Căn chỉnh lại lề cho điện thoại để không bị khoảng trắng thừa trên đầu */
+.block-container {padding-top: 2rem !important;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # ... (Hàm send_email_report và các code bên dưới giữ nguyên) ...
 
