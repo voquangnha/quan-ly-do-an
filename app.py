@@ -101,7 +101,7 @@ df_nhom_toan_cuc = pd.DataFrame(data_nhom) if data_nhom else pd.DataFrame()
 
 if che_do == "👩‍🏫 Giáo viên (Quản lý)":
     mat_khau_gv = st.sidebar.text_input("Nhập mật khẩu quản trị:", type="password")
-    if mat_khau_gv == st.secrets.get("GV_PASSWORD", "nhalinhsypy"): 
+    if mat_khau_gv == st.secrets.get("GV_PASSWORD", "123456"): 
         st.sidebar.success("Xác thực thành công!")
         is_authenticated = True
         role = "Giáo viên"
