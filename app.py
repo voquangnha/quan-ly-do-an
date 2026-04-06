@@ -58,7 +58,17 @@ def get_worksheets():
 
 # Gọi hàm (Cập nhật lại dòng khai báo biến)
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
-
+# --- ẨN LOGO VÀ BIỂU TƯỢNG CỦA STREAMLIT ---
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .viewerBadge_container {display: none;}
+            .stDeployButton {display: none;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 # ... (Hàm send_email_report và các code bên dưới giữ nguyên) ...
 
 def send_email_report(receiver_email, group_name, html_content):
