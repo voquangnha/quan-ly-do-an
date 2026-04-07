@@ -60,14 +60,17 @@ def get_worksheets():
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
 
 
-# --- ẨN GIAO DIỆN STREAMLIT (BẢN AN TOÀN TUYỆT ĐỐI) ---
+# --- ẨN GIAO DIỆN MÀ KHÔNG LÀM MẤT SIDEBAR ---
 hide_streamlit_style = """
 <style>
-/* Ẩn thanh công cụ góc trên bên phải (chứa nút Deploy, dấu 3 chấm) */
-[data-testid="stToolbar"] {display: none !important;}
+/* Chỉ ẩn thanh công cụ góc trên bên phải (nơi có chữ Deploy, Github) */
+[data-testid="stToolbar"] {visibility: hidden !important;}
 
-/* Ẩn chữ 'Made with Streamlit' ở dưới cùng */
+/* Chỉ ẩn chữ footer 'Made with Streamlit' ở dưới cùng */
 footer {visibility: hidden !important;}
+
+/* Giữ nguyên Header để không mất nút mở Sidebar trên điện thoại */
+header {visibility: visible !important;}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
