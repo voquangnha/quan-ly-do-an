@@ -64,8 +64,7 @@ ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_t
 hide_streamlit_style = """
 <style>
 # /* 1. Ẩn Menu và Header trên cùng */
-# [data-testid="stToolbar"] {visibility: hidden !important;}
-# [data-testid="stHeader"] {visibility: hidden !important;}
+
 header {visibility: hidden !important;}
 
 /* 2. Ẩn Footer dưới đáy */
