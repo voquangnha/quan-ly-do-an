@@ -60,29 +60,22 @@ def get_worksheets():
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
 
 
-# --- VŨ KHÍ HẠNG NẶNG: ẨN TRIỆT ĐỂ MỌI LOGO ---
+# --- ẨN LOGO CHÍNH XÁC (GIỮ LẠI NÚT MENU CHO ĐIỆN THOẠI) ---
 hide_streamlit_style = """
 <style>
-# /* 1. Ẩn Menu và Header trên cùng */
+/* 1. Chỉ ẩn cụm công cụ bên phải (Fork, GitHub, 3 chấm), KHÔNG ẩn toàn bộ Header */
+[data-testid="stToolbar"] {display: none !important;}
 
-header {visibility: hidden !important;}
+/* 2. Ẩn chữ Footer 'Made with Streamlit' dưới đáy */
+footer {display: none !important;}
 
-/* 2. Ẩn Footer dưới đáy */
-footer {visibility: hidden !important;}
+/* 3. Ẩn cụm biểu tượng Manage App ở góc dưới cùng bên phải */
+.viewerBadge_container {display: none !important;}
+.viewerBadge_link {display: none !important;}
+[class^="viewerBadge"] {display: none !important;}
 
-/* 3. TUYỆT CHIÊU: Quét và ẩn mọi nút nổi ở góc dưới cùng bên phải */
-div[style*="position: fixed"][style*="bottom"][style*="right"],
-div[style*="bottom: 0px"][style*="right: 0px"],
-div[style*="bottom: 1.5rem"][style*="right: 1.5rem"] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    z-index: -9999 !important;
-}
-
-/* Đè thêm các tên class cũ để phòng hờ */
-[class*="viewerBadge"] {
+/* Ép các div chứa nút ở góc dưới phải biến mất một cách an toàn */
+div[data-testid="stAppViewContainer"] > div:last-child {
     display: none !important;
 }
 </style>
