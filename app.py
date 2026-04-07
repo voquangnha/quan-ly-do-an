@@ -60,23 +60,36 @@ def get_worksheets():
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
 
 
-# --- ẨN TRIỆT ĐỂ LOGO VÀ MENU CỦA STREAMLIT ---
+# --- VŨ KHÍ HẠNG NẶNG: ẨN TRIỆT ĐỂ MỌI LOGO ---
 hide_streamlit_style = """
 <style>
-/* Ẩn thanh công cụ góc trên bên phải */
-[data-testid="stToolbar"] {display: none !important;}
+# /* 1. Ẩn Menu và Header trên cùng */
+# [data-testid="stToolbar"] {visibility: hidden !important;}
+# [data-testid="stHeader"] {visibility: hidden !important;}
 header {visibility: hidden !important;}
 
-/* Ẩn chữ footer ở dưới cùng */
-footer {display: none !important;}
+/* 2. Ẩn Footer dưới đáy */
+footer {visibility: hidden !important;}
 
-/* Ẩn 2 biểu tượng Manage App ở góc dưới cùng bên phải */
-.viewerBadge_container {display: none !important;}
-.viewerBadge_link {display: none !important;}
-[class^="viewerBadge"] {display: none !important;}
+/* 3. TUYỆT CHIÊU: Quét và ẩn mọi nút nổi ở góc dưới cùng bên phải */
+div[style*="position: fixed"][style*="bottom"][style*="right"],
+div[style*="bottom: 0px"][style*="right: 0px"],
+div[style*="bottom: 1.5rem"][style*="right: 1.5rem"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+}
+
+/* Đè thêm các tên class cũ để phòng hờ */
+[class*="viewerBadge"] {
+    display: none !important;
+}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 
 def send_email_report(receiver_email, group_name, html_content):
     sender_email = st.secrets.get("SENDER_EMAIL", "email_cua_ban@gmail.com") 
