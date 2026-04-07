@@ -60,24 +60,14 @@ def get_worksheets():
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
 
 
-# --- ẨN LOGO CHÍNH XÁC (GIỮ LẠI NÚT MENU CHO ĐIỆN THOẠI) ---
+# --- ẨN GIAO DIỆN STREAMLIT (BẢN AN TOÀN TUYỆT ĐỐI) ---
 hide_streamlit_style = """
 <style>
-/* 1. Chỉ ẩn cụm công cụ bên phải (Fork, GitHub, 3 chấm), KHÔNG ẩn toàn bộ Header */
+/* Ẩn thanh công cụ góc trên bên phải (chứa nút Deploy, dấu 3 chấm) */
 [data-testid="stToolbar"] {display: none !important;}
 
-/* 2. Ẩn chữ Footer 'Made with Streamlit' dưới đáy */
-footer {display: none !important;}
-
-/* 3. Ẩn cụm biểu tượng Manage App ở góc dưới cùng bên phải */
-.viewerBadge_container {display: none !important;}
-.viewerBadge_link {display: none !important;}
-[class^="viewerBadge"] {display: none !important;}
-
-/* Ép các div chứa nút ở góc dưới phải biến mất một cách an toàn */
-div[data-testid="stAppViewContainer"] > div:last-child {
-    display: none !important;
-}
+/* Ẩn chữ 'Made with Streamlit' ở dưới cùng */
+footer {visibility: hidden !important;}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
