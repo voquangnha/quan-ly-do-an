@@ -60,7 +60,23 @@ def get_worksheets():
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
 
 
-# ... (Hàm send_email_report và các code bên dưới giữ nguyên) ...
+# --- ẨN TRIỆT ĐỂ LOGO VÀ MENU CỦA STREAMLIT ---
+hide_streamlit_style = """
+<style>
+/* Ẩn thanh công cụ góc trên bên phải */
+[data-testid="stToolbar"] {display: none !important;}
+header {visibility: hidden !important;}
+
+/* Ẩn chữ footer ở dưới cùng */
+footer {display: none !important;}
+
+/* Ẩn 2 biểu tượng Manage App ở góc dưới cùng bên phải */
+.viewerBadge_container {display: none !important;}
+.viewerBadge_link {display: none !important;}
+[class^="viewerBadge"] {display: none !important;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 def send_email_report(receiver_email, group_name, html_content):
     sender_email = st.secrets.get("SENDER_EMAIL", "email_cua_ban@gmail.com") 
