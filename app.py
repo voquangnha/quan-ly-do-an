@@ -60,17 +60,6 @@ def get_worksheets():
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
 
 
-# --- ẨN GIAO DIỆN STREAMLIT (BẢN AN TOÀN - GIỮ LẠI SIDEBAR) ---
-hide_streamlit_style = """
-<style>
-/* 1. Chỉ ẩn thanh công cụ góc trên bên phải (chứa nút Fork, Deploy, dấu 3 chấm) */
-[data-testid="stToolbar"] {visibility: hidden !important;}
-
-/* 2. Ẩn chữ 'Made with Streamlit' ở dưới đáy */
-footer {visibility: hidden !important;}
-</style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 
 def send_email_report(receiver_email, group_name, html_content):
