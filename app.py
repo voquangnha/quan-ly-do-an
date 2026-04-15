@@ -357,7 +357,7 @@ if role == "Giáo viên":
                                 <tr><th>Tiêu chí</th><th>Điểm</th></tr>
                                 <tr><td>Hình thức & Trình bày</td><td>{dg_cuoi['DiemTrinhBay']}</td></tr>
                                 <tr><td>Chất lượng nội dung</td><td>{dg_cuoi['DiemSanPham']}</td></tr>
-                                <tr><td>Tương tác & Phối hợp</td><td>{dg_cuoi['DiemPhuoiHop']}</td></tr>
+                                <tr><td>Tương tác & Phối hợp</td><td>{dg_cuoi['DiemPhoiHop']}</td></tr>
                                 <tr><td><strong>TỔNG ĐIỂM (HỆ SỐ 10)</strong></td><td><strong><span style="color:red; font-size:18px;">{dg_cuoi['TongDiem']}</span></strong></td></tr>
                             </table>
                             <p><strong>Nhận xét:</strong> {dg_cuoi['NhanXet']}</p>
@@ -557,7 +557,7 @@ elif role == "Sinh viên":
                 dg_nhom = df_dg[df_dg['NhomID'] == nhom_id_ht]
                 if not dg_nhom.empty:
                     st.success(f"🎉 Nhóm đã hoàn thành! Tổng điểm: **{dg_nhom.iloc[-1]['TongDiem']}** / 10")
-                    st.table(dg_nhom.iloc[[-1]][['DiemTrinhBay', 'DiemSanPham', 'DiemPhuoiHop', 'NhanXet']])
+                    st.table(dg_nhom.iloc[[-1]][['DiemTrinhBay', 'DiemSanPham', 'DiemPhoiHop', 'NhanXet']])
                 else: 
                     st.info("Đề tài đang thực hiện, chưa có điểm tổng kết.")
             else:
@@ -733,6 +733,6 @@ elif role == "Sinh viên":
                 dg_nhom = df_dg[df_dg['NhomID'] == nhom_id_ht]
                 if not dg_nhom.empty:
                     st.success(f"🎉 Nhóm đã hoàn thành! Tổng điểm: **{dg_nhom.iloc[-1]['TongDiem']}** / 10")
-                    st.table(dg_nhom.iloc[[-1]][['DiemTrinhBay', 'DiemSanPham', 'DiemPhuoiHop', 'NhanXet']])
+                    st.table(dg_nhom.iloc[[-1]][['DiemTrinhBay', 'DiemSanPham', 'DiemPhoiHop', 'NhanXet']])
                 else: st.info("Đề tài đang thực hiện, chưa có điểm tổng kết.")
     else: st.error("Mã truy cập bị lỗi. Vui lòng liên hệ Giảng viên.")
