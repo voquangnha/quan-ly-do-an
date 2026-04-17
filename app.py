@@ -17,19 +17,6 @@ from email import encoders
 st.set_page_config(page_title="Hệ Thống Quản Lý Học Vụ & Đồ Án", layout="wide", page_icon="🎓")
 
 # ==========================================
-# 1. KẾT NỐI GOOGLE SHEETS & HÀM GỬI EMAIL
-# ==========================================
-@st.cache_resource
-def init_connection():
-    if "gcp_service_account_json" in st.secrets:
-        creds_dict = json.loads(st.secrets["gcp_service_account_json"])
-        gc = gspread.service_account_from_dict(creds_dict)
-    else:
-        gc = gspread.service_account(filename='credentials.json')
-    return gc.open("QuanLyDoAn")
-
-sh = init_connection()
-# ==========================================
 # 1. KẾT NỐI GOOGLE SHEETS & TỐI ƯU API
 # ==========================================
 @st.cache_resource
@@ -53,29 +40,35 @@ def get_worksheets():
         sh.worksheet("NhiemVu"),
         sh.worksheet("DanhGiaCheo"),
         sh.worksheet("HoiDap"),
-        sh.worksheet("ThongBao") # <--- BẠN THÊM DÒNG NÀY
+        sh.worksheet("ThongBao") 
     )
 
-# Gọi hàm (Cập nhật lại dòng khai báo biến)
 ws_nhom, ws_lichhen, ws_baocao, ws_danhgia, ws_nhiemvu, ws_peer, ws_hoidap, ws_thongbao = get_worksheets()
 
-
-
-
-def send_email_report(receiver_email, group_name, html_content):
+def send_email_report(receiver_email, tieu_de_hoac_ten_nhom, noi_dung, is_reminder=False):
     sender_email = st.secrets.get("SENDER_EMAIL", "email_cua_ban@gmail.com") 
     app_password = st.secrets.get("APP_PASSWORD", "mat_khau_ung_dung") 
     msg = MIMEMultipart()
     msg['From'] = f"GV Hướng Dẫn <{sender_email}>"
     msg['To'] = receiver_email
-    msg['Subject'] = f"[Thông báo] Kết quả đánh giá - Đề tài: {group_name}"
-    msg.attach(MIMEText(f"Chào nhóm {group_name},\n\nGiảng viên vừa cập nhật kết quả đánh giá cho đồ án của nhóm. Các em tải file Biên bản đính kèm để xem chi tiết nhé.\n\nTrân trọng.", 'plain'))
     
-    attachment = MIMEBase('application', 'octet-stream')
-    attachment.set_payload(html_content.encode('utf-8'))
-    encoders.encode_base64(attachment)
-    attachment.add_header('Content-Disposition', f"attachment; filename= BienBan_{group_name}.html")
-    msg.attach(attachment)
+    # Xử lý luồng: Nhắc nhở (Không đính kèm) vs Gửi Báo cáo (Có đính kèm)
+    if is_reminder:
+        # Nếu là email nhắc deadline
+        msg['Subject'] = tieu_de_hoac_ten_nhom # Ở đây 'tieu_de_hoac_ten_nhom' đóng vai trò là Tiêu đề Email
+        msg.attach(MIMEText(noi_dung, 'plain')) # 'noi_dung' là chữ trơn
+    else:
+        # Nếu là email gửi biên bản điểm
+        msg['Subject'] = f"[Thông báo] Kết quả đánh giá - Đề tài: {tieu_de_hoac_ten_nhom}"
+        text_body = f"Chào nhóm {tieu_de_hoac_ten_nhom},\n\nGiảng viên vừa cập nhật kết quả đánh giá cho đồ án của nhóm. Các em tải file Biên bản đính kèm để xem chi tiết nhé.\n\nTrân trọng."
+        msg.attach(MIMEText(text_body, 'plain'))
+        
+        # Tạo file đính kèm HTML
+        attachment = MIMEBase('application', 'octet-stream')
+        attachment.set_payload(noi_dung.encode('utf-8')) # 'noi_dung' lúc này là chuỗi HTML code
+        encoders.encode_base64(attachment)
+        attachment.add_header('Content-Disposition', f"attachment; filename= BienBan_{tieu_de_hoac_ten_nhom}.html")
+        msg.attach(attachment)
 
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -84,7 +77,8 @@ def send_email_report(receiver_email, group_name, html_content):
         server.send_message(msg)
         server.quit()
         return True
-    except: return False
+    except: 
+        return False
 
 # ==========================================
 # 2. XÁC THỰC VÀ PHÂN QUYỀN (SIDEBAR)
@@ -129,13 +123,13 @@ if not is_authenticated:
 # 3. MENU ĐIỀU HƯỚNG
 # ==========================================
 if role == "Giáo viên":
-    menu = ["📊 Dashboard & Quản Lý", "📢 Quản Lý Thông Báo", "➕ Thêm Nhóm Mới", "🕵️ Theo Dõi Tiến Độ & Lịch Hẹn", "📬 Hòm Thư & Đánh Giá", "🎯 Chấm Điểm & Xuất Báo Cáo"]
+    menu = ["📊 Dashboard & Quản Lý", "📢 Quản Lý Thông Báo", "➕ Thêm Nhóm Mới", "🕵️ Theo Dõi Tiến Độ & Lịch Hẹn", "📬 Hòm Thư & Đánh Giá", "🎯 Chấm Điểm & Xuất Báo Cáo", "📊 Tiêu Chí Chấm Điểm"]
 else: # Vai trò Sinh viên
     menu = [
         "💻 Không Gian Làm Việc Chung", 
-        "🏆 Bảng Xếp Hạng (Leaderboard)",
+        "🏆 Bảng Xếp Hạng",
         "📚 Thư Viện Biểu Mẫu", 
-        "🤝 Đánh Giá Chéo (Peer Review)", 
+        "🤝 Đánh Giá Chéo", 
         "🆘 Gửi Câu Hỏi Cho GV",
         "🔍 Tra cứu Điểm & Phản hồi"
     ]
@@ -176,7 +170,6 @@ if role == "Giáo viên":
             
             ten_nhom = st.text_input("Tên Nhóm (Vd: Nhóm 1)")
             
-            # --- Ô NHẬP DANH SÁCH SINH VIÊN (VỪA THÊM MỚI) ---
             danh_sach_sv = st.text_area(
                 "Danh sách sinh viên (Họ và Tên - Mã SV):", 
                 placeholder="Ví dụ:\n1. Nguyễn Văn A - 20T1020111\n2. Trần Thị B - 20T1020112"
@@ -189,10 +182,8 @@ if role == "Giáo viên":
             trang_thai = st.selectbox("Trạng thái", ["Mới bắt đầu", "Đang thực hiện", "Chờ nghiệm thu", "Đã hoàn thành"])
             
             if st.form_submit_button("Lưu thông tin Nhóm"):
-                # Bắt buộc phải nhập Tên nhóm, Mã truy cập và Danh sách sinh viên
                 if ten_nhom and passcode and danh_sach_sv: 
                     new_id = len(ws_nhom.get_all_values())
-                    # Lưu ý: danh_sach_sv được đẩy vào vị trí cuối cùng của hàng
                     ws_nhom.append_row([new_id, khoa, lop, hoc_phan, ten_nhom, ten_de_tai, email_nhom, passcode, link_docs, trang_thai, danh_sach_sv])
                     st.success(f"Đã thêm {ten_nhom} thành công!")
                 else:
@@ -252,7 +243,88 @@ if role == "Giáo viên":
                     count_hp.columns = ['Học Phần', 'Số Lượng Nhóm']
                     fig_bar = px.bar(count_hp, x='Học Phần', y='Số Lượng Nhóm', title="Phân bổ nhóm theo Học phần", text='Số Lượng Nhóm')
                     st.plotly_chart(fig_bar, use_container_width=True)
-        else: st.info("Chưa có dữ liệu trên hệ thống.")
+            
+            # --- BỔ SUNG & SỬA LỖI BẢNG XẾP HẠNG CHO GIÁO VIÊN ---
+            st.write("---")
+            st.subheader("🏆 Bảng Xếp Hạng Thi Đua Các Nhóm")
+            
+            df_bc_all = pd.DataFrame(ws_baocao.get_all_records())
+            df_nv_all = pd.DataFrame(ws_nhiemvu.get_all_records())
+            
+            bang_diem_gv = []
+            for _, row_nhom in df_loc.iterrows():
+                n_id = row_nhom['ID']
+                diem_chat = 0
+                diem_task = 0
+                
+                # Tính điểm Chat (Loại trừ các tin nhắn do Giảng viên nhắn để công bằng)
+                if not df_bc_all.empty and 'NhomID' in df_bc_all.columns:
+                    sv_chat = df_bc_all[(df_bc_all['NhomID'] == n_id) & (~df_bc_all['TenSinhVien'].astype(str).str.contains("Giảng viên", na=False))]
+                    diem_chat = len(sv_chat) * 2
+                
+                # Tính điểm Task đã hoàn thành
+                if not df_nv_all.empty and 'NhomID' in df_nv_all.columns:
+                    diem_task = len(df_nv_all[(df_nv_all['NhomID'] == n_id) & (df_nv_all['TrangThai'] == 'Đã xong')]) * 10
+                    
+                tong_diem = diem_chat + diem_task
+                
+                bang_diem_gv.append({
+                    "Mã Nhóm Trục X": f"{row_nhom['TenNhom']} ({row_nhom['Lop']})", # Fix lỗi cộng dồn biểu đồ
+                    "Tên Nhóm": row_nhom['TenNhom'],
+                    "Lớp": row_nhom['Lop'],
+                    "Học Phần": row_nhom['HocPhan'],
+                    "Điểm Trao Đổi": diem_chat, # Tách điểm để dễ quản lý
+                    "Điểm Nhiệm Vụ": diem_task, # Tách điểm để dễ quản lý
+                    "Điểm Năng Nổ": tong_diem
+                })
+                
+            df_bang_diem_gv = pd.DataFrame(bang_diem_gv).sort_values(by="Điểm Năng Nổ", ascending=False).reset_index(drop=True)
+            
+            if not df_bang_diem_gv.empty and df_bang_diem_gv['Điểm Năng Nổ'].sum() > 0:
+                # --- THAY THẾ KHỐI HIỂN THỊ HUY CHƯƠNG TẠI ĐÂY ---
+                c1, c2, c3 = st.columns(3)
+                if len(df_bang_diem_gv) > 0:
+                    c1.success(f"""
+                        🥇 **Hạng 1: {df_bang_diem_gv.iloc[0]['Tên Nhóm']}**
+                        \n 📘 {df_bang_diem_gv.iloc[0]['Học Phần']}
+                        \n 🏫 Lớp: {df_bang_diem_gv.iloc[0]['Lớp']}
+                        \n 🔥 {df_bang_diem_gv.iloc[0]['Điểm Năng Nổ']} Điểm
+                    """)
+                if len(df_bang_diem_gv) > 1:
+                    c2.info(f"""
+                        🥈 **Hạng 2: {df_bang_diem_gv.iloc[1]['Tên Nhóm']}**
+                        \n 📘 {df_bang_diem_gv.iloc[1]['Học Phần']}
+                        \n 🏫 Lớp: {df_bang_diem_gv.iloc[1]['Lớp']}
+                        \n ⚡ {df_bang_diem_gv.iloc[1]['Điểm Năng Nổ']} Điểm
+                    """)
+                if len(df_bang_diem_gv) > 2:
+                    c3.warning(f"""
+                        🥉 **Hạng 3: {df_bang_diem_gv.iloc[2]['Tên Nhóm']}**
+                        \n 📘 {df_bang_diem_gv.iloc[2]['Học Phần']}
+                        \n 🏫 Lớp: {df_bang_diem_gv.iloc[2]['Lớp']}
+                        \n 🌟 {df_bang_diem_gv.iloc[2]['Điểm Năng Nổ']} Điểm
+                    """)
+                # --- KẾT THÚC ĐOẠN THAY THẾ ---
+
+                # Biểu đồ vẫn giữ nguyên phía dưới...
+                fig_ldb = px.bar(df_bang_diem_gv, x="Mã Nhóm Trục X", y="Điểm Năng Nổ", color="Điểm Năng Nổ", text="Điểm Năng Nổ", 
+                                 title="Biểu đồ thi đua chi tiết", color_continuous_scale="Viridis", 
+                                 hover_data=["Học Phần", "Điểm Trao Đổi", "Điểm Nhiệm Vụ"])
+                st.plotly_chart(fig_ldb, use_container_width=True)
+                
+                # TÍNH NĂNG MỚI: Bảng chi tiết và Nút xuất Excel
+                with st.expander("👁️ Xem chi tiết cơ cấu điểm & Xuất file Excel"):
+                    st.dataframe(df_bang_diem_gv[['Tên Nhóm', 'Lớp', 'Học Phần', 'Điểm Trao Đổi', 'Điểm Nhiệm Vụ', 'Điểm Năng Nổ']], use_container_width=True)
+                    # Dùng utf-8-sig để xuất ra Excel không bị lỗi font tiếng Việt
+                    csv = df_bang_diem_gv.to_csv(index=False).encode('utf-8-sig')
+                    st.download_button(
+                        label="📥 Tải Bảng Điểm Thi Đua (CSV)",
+                        data=csv,
+                        file_name=f'Bang_Xep_Hang_Thi_Dua_{datetime.now().strftime("%Y%m%d")}.csv',
+                        mime='text/csv',
+                    )
+            else:
+                st.info("Chưa có dữ liệu điểm thi đua cho các nhóm trong bộ lọc này.")
 
     elif choice == "🕵️ Theo Dõi Tiến Độ & Lịch Hẹn":
         st.header("🕵️ Giám Sát Hoạt Động Của Sinh Viên")
@@ -274,8 +346,26 @@ if role == "Giáo viên":
                         fig_dong_gop = px.bar(df_counts, x='Tên Sinh Viên', y='Số lần báo cáo/trao đổi', color='Số lần báo cáo/trao đổi')
                         st.plotly_chart(fig_dong_gop, use_container_width=True)
                         
+                        # --- BỔ SUNG: CHAT TRỰC TIẾP CỦA GIÁO VIÊN ---
+                        st.write("---")
+                        st.subheader("💬 Nhật Ký & Thảo Luận Nhóm (Chat)")
+                        
+                        with st.form("form_chat_gv", clear_on_submit=True):
+                            tin_nhan_gv = st.text_area("Nhắn tin / Yêu cầu công việc trực tiếp cho nhóm:")
+                            if st.form_submit_button("Gửi tin nhắn"):
+                                if tin_nhan_gv:
+                                    ws_baocao.append_row([int(nhom_id), "👩‍🏫 Giảng viên", tin_nhan_gv, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), ""])
+                                    st.success("Đã gửi tin nhắn cho nhóm!")
+                                    st.rerun()
+                                else:
+                                    st.warning("Vui lòng nhập nội dung.")
+                        
                         st.write("**Lịch sử trao đổi chi tiết của nhóm:**")
-                        st.dataframe(df_bc_nhom[['NgayNop', 'TenSinhVien', 'NoiDung']].iloc[::-1], use_container_width=True)
+                        for _, row in df_bc_nhom.iloc[::-1].iterrows():
+                            if "Giảng viên" in str(row['TenSinhVien']):
+                                st.markdown(f"<div style='background-color:#ffe6e6; padding:10px; border-radius:10px; margin-bottom:10px; border-left: 4px solid #f44336;'><small><b>{row['TenSinhVien']}</b> <i>({row['NgayNop']})</i></small><br>{row['NoiDung']}</div>", unsafe_allow_html=True)
+                            else:
+                                st.markdown(f"<div style='background-color:#f0f2f6; padding:10px; border-radius:10px; margin-bottom:10px; border-left: 4px solid #4CAF50;'><small><b>👤 {row['TenSinhVien']}</b> <i>({row['NgayNop']})</i></small><br>{row['NoiDung']}</div>", unsafe_allow_html=True)
                     else: st.info("Nhóm này chưa có hoạt động trao đổi nào.")
                 
                 # Đặt lịch hẹn & Giao việc
@@ -334,7 +424,6 @@ if role == "Giáo viên":
                         if st.form_submit_button("Lưu Điểm"):
                             tong = round((diem_tb + diem_sp + diem_ph) / 3, 2)
                             ws_danhgia.append_row([int(nhom_id), float(diem_tb), float(diem_sp), float(diem_ph), float(tong), nx])
-                            # Đổi trạng thái thành Hoàn thành
                             ws_nhom.update_cell(nhom_id + 2, 10, "Hoàn thành") 
                             st.success(f"Đã lưu điểm! Tổng: {tong}")
                             
@@ -374,29 +463,36 @@ if role == "Giáo viên":
             else:
                 st.warning("Vui lòng lọc đến cấp 'Nhóm' để chấm điểm.")
     
+    elif choice == "📊 Tiêu Chí Chấm Điểm":
+        st.header("📊 Tiêu Chí Chấm Điểm Đồ Án / Tiểu Luận")
+        st.info("💡 Sinh viên vui lòng đọc kỹ các tiêu chí dưới đây để tối ưu hóa điểm số cho bài làm của nhóm mình.")
+        
+        st.markdown("""
+        | Tiêu chí đánh giá | Trọng số | Xuất sắc (8.5 - 10) | Khá (7.0 - 8.4) | Trung bình (5.0 - 6.9) | Yếu (Dưới 5.0) |
+        | :--- | :---: | :--- | :--- | :--- | :--- |
+        | **1. Cấu trúc & Hình thức** | **15%** | Trình bày chuyên nghiệp, chuẩn học thuật. Văn phong mạch lạc, không lỗi chính tả. Trích dẫn nguồn chuẩn xác. | Trình bày rõ ràng, đúng form. Còn vài lỗi nhỏ đánh máy. Trích dẫn đầy đủ nhưng đôi chỗ chưa chuẩn form. | Bố cục thiếu cân đối. Có khá nhiều lỗi chính tả/ngữ pháp. Trích dẫn sơ sài, thiếu nguồn rõ ràng. | Không tuân thủ cấu trúc. Lỗi chính tả/ngữ pháp chằng chịt. Không có trích dẫn hoặc đạo văn. |
+        | **2. Nội dung & Độ sâu** | **35%** | Hiểu cực kỳ sâu sắc vấn đề. Lập luận sắc bén, logic. Dữ liệu phong phú, đáng tin cậy. Có đóng góp mới. | Nắm vững vấn đề trọng tâm. Lập luận tốt nhưng chưa đào sâu. Dữ liệu đầy đủ nhưng thiếu đột phá. | Chỉ nêu bề mặt vấn đề. Lập luận thiếu liên kết. Dữ liệu cũ hoặc chưa sát đề tài. | Đi lạc đề hoặc sai kiến thức cơ bản. Không có dẫn chứng thực tế. |
+        | **3. Giải quyết vấn đề** | **20%** | Đề xuất giải pháp thực tiễn, khả thi. Đánh giá được ưu/nhược điểm. Nhìn nhận vấn đề đa chiều. | Có giải pháp rõ ràng, giải quyết được vấn đề. Tính khả thi hoặc tính mới chưa cao. | Giải pháp hời hợt, lý thuyết suông, khó áp dụng vào thực tế. | Không có giải pháp hoặc phi logic, sao chép máy móc. |
+        | **4. Thuyết trình/Phản biện** | **15%** | Tự tin, lôi cuốn. Slide trực quan. Trả lời phản biện sắc sảo, đi thẳng trọng tâm. | Thuyết trình lưu loát. Slide gọn gàng. Trả lời được hầu hết các câu hỏi phản biện. | Phụ thuộc tài liệu, đọc slide. Slide rối mắt. Trả lời ấp úng, lan man. | Không nắm được nội dung. Slide cẩu thả. Không trả lời được câu hỏi. |
+        | **5. Làm việc nhóm** | **15%** | Cập nhật tiến độ đúng hạn. Phân công rõ ràng, mọi thành viên đều hiểu rõ phần việc. | Nộp bài đúng hạn. Phối hợp tốt nhưng vài cá nhân chưa rành việc của người khác. | Nộp báo cáo trễ hạn. Phân chia không đều, có hiện tượng "gánh team". | Trễ hạn nhiều lần. Nhóm rời rạc, mâu thuẫn hoặc có người không tham gia. |
+        """)
+
     elif choice == "📬 Hòm Thư & Đánh Giá":
         st.header("📬 Hòm Thư Hỗ Trợ & Phân Tích Đánh Giá Chéo")
         
-        # Chia làm 2 Tab để màn hình gọn gàng
-        tab1, tab2 = st.tabs(["🆘 Giải đáp thắc mắc (SOS)", "🤝 Kết quả Đánh giá chéo"])
+        tab1, tab2, tab3 = st.tabs(["🆘 Giải đáp (SOS)", "🤝 Đánh giá chéo", "⏰ Kiểm soát tiến độ"])
         
-        # ==========================================
-        # TAB 1: GIẢI ĐÁP CÂU HỎI SOS
-        # ==========================================
         with tab1:
             st.subheader("Quản lý câu hỏi từ Sinh viên")
             df_hd = pd.DataFrame(ws_hoidap.get_all_records())
             
             if not df_hd.empty:
-                # Lọc tách biệt câu hỏi chưa trả lời và đã trả lời
                 df_hd_chua_tl = df_hd[df_hd['TrangThai'] == "Chưa trả lời"]
                 df_hd_da_tl = df_hd[df_hd['TrangThai'] != "Chưa trả lời"]
                 
-                # Khu vực 1: Cần xử lý gấp
                 if not df_hd_chua_tl.empty:
                     st.warning(f"🔔 Có {len(df_hd_chua_tl)} câu hỏi đang chờ bạn phản hồi!")
                     for idx, row in df_hd_chua_tl.iterrows():
-                        # Dùng expander để tạo hộp đóng/mở cho từng câu hỏi
                         with st.expander(f"🔴 {row['TenSinhVien']} (Nhóm ID: {row['NhomID']}) - {row['ThoiGian']}"):
                             st.write(f"**Nội dung hỏi:** {row['CauHoi']}")
                             
@@ -404,14 +500,12 @@ if role == "Giáo viên":
                                 tra_loi = st.text_area("Nhập câu trả lời của bạn:")
                                 if st.form_submit_button("Gửi câu trả lời"):
                                     if tra_loi:
-                                        # Ghi đè câu trả lời vào cột TrangThai (Cột số 5)
                                         ws_hoidap.update_cell(idx + 2, 5, f"👨‍🏫 Giảng viên: {tra_loi}")
                                         st.success("Đã gửi phản hồi thành công!")
                                         st.rerun()
                                     else:
                                         st.error("Vui lòng nhập nội dung trả lời.")
                 
-                # Khu vực 2: Lịch sử đã xử lý
                 if not df_hd_da_tl.empty:
                     st.write("---")
                     st.write("**Lịch sử các câu hỏi đã giải quyết:**")
@@ -422,20 +516,15 @@ if role == "Giáo viên":
             else:
                 st.info("Hiện tại không có câu hỏi nào từ sinh viên.")
 
-        # ==========================================
-        # TAB 2: QUẢN LÝ ĐÁNH GIÁ CHÉO
-        # ==========================================
         with tab2:
-            st.subheader("Kết quả Peer Review từ Sinh viên")
+            st.subheader("Kết quả Đánh giá chéo từ Sinh viên")
             st.write("Bảng dữ liệu bí mật này giúp bạn nắm được ai là người đóng góp nhiều nhất trong các nhóm.")
             
             df_peer = pd.DataFrame(ws_peer.get_all_records())
             if not df_peer.empty:
-                # Nối với bảng Nhóm để lấy tên Lớp/Khóa thay vì chỉ hiện ID khô khan
                 if not df_nhom_toan_cuc.empty:
                     df_hien_thi_peer = df_peer.merge(df_nhom_toan_cuc[['ID', 'TenNhom', 'Khoa', 'Lop']], left_on='NhomID', right_on='ID', how='left')
                     
-                    # Cho phép giáo viên lọc theo Khóa/Lớp
                     lop_loc = st.selectbox("Lọc kết quả đánh giá theo Lớp:", ["Tất cả"] + df_hien_thi_peer['Lop'].dropna().unique().tolist())
                     if lop_loc != "Tất cả":
                         df_hien_thi_peer = df_hien_thi_peer[df_hien_thi_peer['Lop'] == lop_loc]
@@ -445,6 +534,58 @@ if role == "Giáo viên":
                     st.dataframe(df_peer, use_container_width=True)
             else:
                 st.info("Chưa có sinh viên nào thực hiện đánh giá chéo.")
+        
+        with tab3:
+            st.subheader("⏰ Cảnh Báo Hạn Chót (Trong 24h tới)")
+            
+            # 1. Chuẩn bị dữ liệu
+            df_nv_all = pd.DataFrame(ws_nhiemvu.get_all_records())
+            df_nhom_all = pd.DataFrame(ws_nhom.get_all_records())
+            
+            if not df_nv_all.empty:
+                # Chuyển cột Deadline sang định dạng datetime để tính toán
+                df_nv_all['Deadline'] = pd.to_datetime(df_nv_all['Deadline'])
+                bay_gio = datetime.now()
+                han_chot_24h = bay_gio + pd.Timedelta(hours=24)
+                
+                # Lọc các nhiệm vụ: Chưa xong VÀ Hạn chót <= 24h tới
+                df_sap_den_han = df_nv_all[
+                    (df_nv_all['TrangThai'] == "Chưa xong") & 
+                    (df_nv_all['Deadline'] <= han_chot_24h)
+                ]
+                
+                if not df_sap_den_han.empty:
+                    # Kết nối với thông tin nhóm để lấy Email và Tên nhóm
+                    df_canh_bao = df_sap_den_han.merge(df_nhom_all[['ID', 'TenNhom', 'EmailNhom', 'TenDeTai']], left_on='NhomID', right_on='ID')
+                    
+                    st.warning(f"Phát hiện {len(df_canh_bao)} nhiệm vụ sắp đến hạn hoặc đã quá hạn!")
+                    st.dataframe(df_canh_bao[['TenNhom', 'NoiDungTask', 'Deadline', 'EmailNhom']], use_container_width=True)
+                    
+                    # Nút gửi email nhắc nhở đồng loạt
+                    if st.button("📧 Gửi Email nhắc nhở đồng loạt cho các nhóm này"):
+                        danh_sach_email = df_canh_bao['EmailNhom'].unique()
+                        count_success = 0
+                        
+                        with st.spinner("Đang gửi email nhắc nhở..."):
+                            for email_nhom in danh_sach_email:
+                                tasks_nhom = df_canh_bao[df_canh_bao['EmailNhom'] == email_nhom]
+                                ten_nhom_gui = tasks_nhom['TenNhom'].iloc[0]
+                                de_tai_gui = tasks_nhom['TenDeTai'].iloc[0]
+                                
+                                noi_dung_nhac = f"Chào nhóm {ten_nhom_gui},\n\nGiảng viên nhắc nhở các em có nhiệm vụ sắp đến hạn:\n"
+                                for _, r in tasks_nhom.iterrows():
+                                    noi_dung_nhac += f"- {r['NoiDungTask']} (Hạn: {r['Deadline'].strftime('%d/%m/%Y')})\n"
+                                noi_dung_nhac += "\nCác em khẩn trương hoàn thành đúng hạn nhé.\nTrân trọng."
+                                
+                                # Gửi email
+                                if send_email_report(email_nhom, f"NHẮC HẠN: {de_tai_gui}", noi_dung_nhac):
+                                    count_success += 1
+                        
+                        st.success(f"Đã gửi thành công email nhắc nhở đến {count_success} nhóm!")
+                else:
+                    st.info("Hiện tại không có nhiệm vụ nào sắp đến hạn trong 24h tới.")
+            else:
+                st.info("Chưa có dữ liệu nhiệm vụ.")        
 
 # ==========================================
 # 5. GIAO DIỆN SINH VIÊN
@@ -459,7 +600,6 @@ elif role == "Sinh viên":
         if choice == "💻 Không Gian Làm Việc Chung":
             st.success(f"📌 Đang làm việc: **{thong_tin_sv['Khoa']} | {thong_tin_sv['Lop']} | {thong_tin_sv['HocPhan']} | {thong_tin_sv['TenNhom']}** \n\n 📝 Đề tài: **{thong_tin_sv['TenDeTai']}**")
             
-            # --- CHÈN BẢNG TIN THÔNG BÁO VÀO ĐÂY ---
             df_tb = pd.DataFrame(ws_thongbao.get_all_records())
             if not df_tb.empty:
                 df_hien_thi = df_tb[df_tb['TrangThai'] == "Hiển thị"]
@@ -474,10 +614,9 @@ elif role == "Sinh viên":
                         else:
                             st.warning(f"📌 **{row['TieuDe']}** ({row['ThoiGian']})\n\n{row['NoiDung']}")
             st.write("---")
-            # ----------------------------------------
-            
-            # (Phần code chia cột col_chat, col_doc và To-do list cũ nằm ở dưới này giữ nguyên)
-            
+            import streamlit as st
+ 
+
             df_nv = pd.DataFrame(ws_nhiemvu.get_all_records())
             if not df_nv.empty:
                 df_nv_nhom = df_nv[df_nv['NhomID'] == nhom_id_ht]
@@ -486,19 +625,15 @@ elif role == "Sinh viên":
                         c1, c2 = st.columns([5, 1])
                         with c1:
                             if row['TrangThai'] == "Đã xong":
-                                # Gạch ngang chữ nếu đã hoàn thành
                                 st.markdown(f"~~**{row['NoiDungTask']}** *(Deadline: {row['Deadline']})*~~")
                             else:
-                                # In đậm và tô đỏ ngày deadline nếu chưa xong
                                 st.markdown(f"👉 **{row['NoiDungTask']}** *(Deadline: <span style='color:red;'>{row['Deadline']}</span>)*", unsafe_allow_html=True)
                         with c2:
                             if row['TrangThai'] == "Chưa xong":
-                                # Nút tick hoàn thành công việc
                                 if st.button("Tick Xong ✔️", key=f"task_done_{idx}"):
                                     ws_nhiemvu.update_cell(idx + 2, 4, "Đã xong")
-                                    st.rerun() # Tải lại trang ngay lập tức
+                                    st.rerun()
                             else:
-                                # Nút Hoàn tác (Bỏ tick) nếu lỡ bấm nhầm
                                 if st.button("↩️ Bỏ tick", key=f"task_undo_{idx}"):
                                     ws_nhiemvu.update_cell(idx + 2, 4, "Chưa xong")
                                     st.rerun()
@@ -523,8 +658,12 @@ elif role == "Sinh viên":
                 df_bc = pd.DataFrame(ws_baocao.get_all_records())
                 if not df_bc.empty:
                     df_chat = df_bc[df_bc['NhomID'] == nhom_id_ht]
+                    # --- BỔ SUNG: HIỂN THỊ CHAT BÊN PHÍA SINH VIÊN ---
                     for _, row in df_chat.iloc[::-1].iterrows():
-                        st.markdown(f"<div style='background-color:#f0f2f6; padding:10px; border-radius:10px; margin-bottom:10px; border-left: 4px solid #4CAF50;'><small><b>👤 {row['TenSinhVien']}</b> <i>({row['NgayNop']})</i></small><br>{row['NoiDung']}</div>", unsafe_allow_html=True)
+                        if "Giảng viên" in str(row['TenSinhVien']):
+                            st.markdown(f"<div style='background-color:#ffe6e6; padding:10px; border-radius:10px; margin-bottom:10px; border-left: 4px solid #f44336;'><small><b>{row['TenSinhVien']}</b> <i>({row['NgayNop']})</i></small><br>{row['NoiDung']}</div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<div style='background-color:#f0f2f6; padding:10px; border-radius:10px; margin-bottom:10px; border-left: 4px solid #4CAF50;'><small><b>👤 {row['TenSinhVien']}</b> <i>({row['NgayNop']})</i></small><br>{row['NoiDung']}</div>", unsafe_allow_html=True)
 
             with col_doc:
                 st.subheader("📝 Soạn Thảo Đồ Án / Tiểu Luận Trực Tiếp")
@@ -537,7 +676,6 @@ elif role == "Sinh viên":
         elif choice == "🔍 Tra cứu Điểm & Phản hồi":
             st.header("🔍 Kết Quả & Phản Hồi Từ Giảng Viên")
             
-            # 1. Hiển thị Lịch hẹn
             st.subheader("📅 Lịch hẹn báo cáo sắp tới")
             df_lich = pd.DataFrame(ws_lichhen.get_all_records())
             if not df_lich.empty:
@@ -549,7 +687,6 @@ elif role == "Sinh viên":
             else:
                 st.info("Hệ thống chưa có dữ liệu lịch hẹn.")
             
-            # 2. Hiển thị Điểm số Rubric
             st.write("---")
             st.subheader("🎯 Bảng điểm tổng kết")
             df_dg = pd.DataFrame(ws_danhgia.get_all_records())
@@ -578,34 +715,33 @@ elif role == "Sinh viên":
                 st.link_button("📄 Mẫu trang bìa & Mục lục (Word)", "https://link_file_word.docx")
                 st.link_button("🎨 Mẫu Slide thuyết trình (PPTX)", "https://link_file_pptx.pptx")
         
-        elif choice == "🏆 Bảng Xếp Hạng (Leaderboard)":
-            st.header("🏆 Bảng Xếp Hạng Thi Đua (Leaderboard)")
+        elif choice == "🏆 Bảng Xếp Hạng":
+            st.header("🏆 Bảng Xếp Hạng Thi Đua")
             st.write(f"Đang hiển thị bảng xếp hạng năng nổ của lớp: **{thong_tin_sv['Lop']}** - Học phần: **{thong_tin_sv['HocPhan']}**")
             
             st.info("💡 **Cách tính điểm thi đua:** Mỗi tin nhắn báo cáo tiến độ (+2 điểm). Mỗi nhiệm vụ hoàn thành (+10 điểm).")
             
-            # 1. Kéo dữ liệu Lịch sử Chat và Nhiệm vụ
             df_bc = pd.DataFrame(ws_baocao.get_all_records())
             df_nv = pd.DataFrame(ws_nhiemvu.get_all_records())
             
-            # 2. Chỉ lọc các nhóm học cùng Lớp & cùng Học phần để đua top cho công bằng
+            # Chỉ lấy các nhóm cùng Lớp và cùng Học phần
             df_cung_lop = df_nhom_toan_cuc[
                 (df_nhom_toan_cuc['Lop'] == thong_tin_sv['Lop']) & 
                 (df_nhom_toan_cuc['HocPhan'] == thong_tin_sv['HocPhan'])
             ]
             
-            # 3. Thuật toán tự động quét và tính điểm
             bang_diem = []
             for _, row_nhom in df_cung_lop.iterrows():
                 n_id = row_nhom['ID']
                 diem_chat = 0
                 diem_task = 0
                 
-                # Tính điểm Chat
+                # Tính điểm Chat (không tính tin nhắn của Giảng viên)
                 if not df_bc.empty and 'NhomID' in df_bc.columns:
-                    diem_chat = len(df_bc[df_bc['NhomID'] == n_id]) * 2
+                    sv_chat = df_bc[(df_bc['NhomID'] == n_id) & (~df_bc['TenSinhVien'].astype(str).str.contains("Giảng viên", na=False))]
+                    diem_chat = len(sv_chat) * 2
                 
-                # Tính điểm Task (chỉ lấy task "Đã xong")
+                # Tính điểm Task
                 if not df_nv.empty and 'NhomID' in df_nv.columns:
                     diem_task = len(df_nv[(df_nv['NhomID'] == n_id) & (df_nv['TrangThai'] == 'Đã xong')]) * 10
                     
@@ -614,36 +750,60 @@ elif role == "Sinh viên":
                 bang_diem.append({
                     "Tên Nhóm": row_nhom['TenNhom'],
                     "Đề Tài": row_nhom['TenDeTai'],
+                    "Điểm Trao Đổi": diem_chat,
+                    "Điểm Nhiệm Vụ": diem_task,
                     "Điểm Năng Nổ": tong_diem
                 })
                 
-            # Xếp hạng từ cao xuống thấp
             df_bang_diem = pd.DataFrame(bang_diem).sort_values(by="Điểm Năng Nổ", ascending=False).reset_index(drop=True)
             
-            # 4. Hiển thị Giao diện Bảng Vàng và Biểu đồ
             if not df_bang_diem.empty and df_bang_diem['Điểm Năng Nổ'].sum() > 0:
                 st.write("---")
                 
-                # Hiển thị Top 3 Huy chương
+                # Hiển thị Top 3 có thêm tên Đề tài
                 c1, c2, c3 = st.columns(3)
                 if len(df_bang_diem) > 0:
-                    c1.success(f"🥇 **Hạng 1: {df_bang_diem.iloc[0]['Tên Nhóm']}** \n\n 🔥 {df_bang_diem.iloc[0]['Điểm Năng Nổ']} Điểm")
+                    c1.success(f"""
+                        🥇 **Hạng 1: {df_bang_diem.iloc[0]['Tên Nhóm']}**
+                        \n 📝 Đề tài: {df_bang_diem.iloc[0]['Đề Tài']}
+                        \n 🔥 {df_bang_diem.iloc[0]['Điểm Năng Nổ']} Điểm
+                    """)
                 if len(df_bang_diem) > 1:
-                    c2.info(f"🥈 **Hạng 2: {df_bang_diem.iloc[1]['Tên Nhóm']}** \n\n ⚡ {df_bang_diem.iloc[1]['Điểm Năng Nổ']} Điểm")
+                    c2.info(f"""
+                        🥈 **Hạng 2: {df_bang_diem.iloc[1]['Tên Nhóm']}**
+                        \n 📝 Đề tài: {df_bang_diem.iloc[1]['Đề Tài']}
+                        \n ⚡ {df_bang_diem.iloc[1]['Điểm Năng Nổ']} Điểm
+                    """)
                 if len(df_bang_diem) > 2:
-                    c3.warning(f"🥉 **Hạng 3: {df_bang_diem.iloc[2]['Tên Nhóm']}** \n\n 🌟 {df_bang_diem.iloc[2]['Điểm Năng Nổ']} Điểm")
+                    c3.warning(f"""
+                        🥉 **Hạng 3: {df_bang_diem.iloc[2]['Tên Nhóm']}**
+                        \n 📝 Đề tài: {df_bang_diem.iloc[2]['Đề Tài']}
+                        \n 🌟 {df_bang_diem.iloc[2]['Điểm Năng Nổ']} Điểm
+                    """)
                 
                 st.write("---")
                 
-                # Vẽ biểu đồ trực quan
+                # Biểu đồ cập nhật thêm Hover Data (Chi tiết điểm khi rê chuột)
                 fig = px.bar(df_bang_diem, x="Tên Nhóm", y="Điểm Năng Nổ", color="Điểm Năng Nổ", text="Điểm Năng Nổ", 
-                             title="Cột năng lượng đóng góp của các nhóm", color_continuous_scale="Viridis")
+                             title="Biểu đồ năng lượng đóng góp của các nhóm trong lớp", color_continuous_scale="Viridis",
+                             hover_data=["Đề Tài", "Điểm Trao Đổi", "Điểm Nhiệm Vụ"])
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # Nút mở rộng xem bảng chi tiết và xuất Excel
+                with st.expander("👁️ Xem chi tiết cơ cấu điểm & Tải Bảng Xếp Hạng"):
+                    st.dataframe(df_bang_diem[['Tên Nhóm', 'Đề Tài', 'Điểm Trao Đổi', 'Điểm Nhiệm Vụ', 'Điểm Năng Nổ']], use_container_width=True)
+                    csv_sv = df_bang_diem.to_csv(index=False).encode('utf-8-sig')
+                    st.download_button(
+                        label="📥 Tải Bảng Điểm Thi Đua (CSV)",
+                        data=csv_sv,
+                        file_name=f'Bang_Xep_Hang_Lop_{thong_tin_sv["Lop"]}_{datetime.now().strftime("%Y%m%d")}.csv',
+                        mime='text/csv',
+                    )
                 
             else:
                 st.info("Chưa có điểm thi đua nào được ghi nhận. Các nhóm hãy nhắn tin trao đổi và hoàn thành nhiệm vụ để khai trương bảng xếp hạng nhé!")
 
-        elif choice == "🤝 Đánh Giá Chéo (Peer Review)" and role == "Sinh viên":
+        elif choice == "🤝 Đánh Giá Chéo" and role == "Sinh viên":
             st.header("🤝 Đánh Giá Đóng Góp Nội Bộ Nhóm")
             st.warning("Lưu ý: Kết quả đánh giá này sẽ được gửi bí mật đến Giảng viên để làm căn cứ chấm điểm cá nhân cuối kỳ.")
             
@@ -669,9 +829,7 @@ elif role == "Sinh viên":
             st.header("🆘 Kênh Hỗ Trợ Khẩn Cấp / Hỏi Đáp Riêng")
             st.write("Kênh này được bảo mật tuyệt đối. Các thành viên khác trong nhóm sẽ không thể xem được nội dung em trao đổi với Giảng viên.")
             
-            # 1. KHU VỰC GỬI CÂU HỎI
             with st.form("form_sos"):
-                # Yêu cầu nhập MSSV để làm "chìa khóa" bảo mật
                 ten_sv_hoi = st.text_input("Nhập Họ Tên hoặc MSSV của em (Dùng làm chìa khóa bảo mật):")
                 noi_dung_hoi = st.text_area("Nội dung câu hỏi hoặc vấn đề cần hỗ trợ:")
                 is_urgent = st.checkbox("Vấn đề khẩn cấp cần phản hồi ngay?")
@@ -679,18 +837,15 @@ elif role == "Sinh viên":
                 if st.form_submit_button("Gửi câu hỏi"):
                     if ten_sv_hoi and noi_dung_hoi:
                         tag = "[KHẨN CẤP]" if is_urgent else "[Bình thường]"
-                        # Lưu tên/MSSV vào hệ thống để đối chiếu sau này
                         ws_hoidap.append_row([int(nhom_id_ht), ten_sv_hoi.strip(), f"{tag} {noi_dung_hoi}", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Chưa trả lời"])
                         st.success("Câu hỏi đã được gửi bí mật đến Giảng viên!")
                     else: st.warning("Vui lòng nhập đủ thông tin.")
 
             st.write("---")
             
-            # 2. KHU VỰC XEM CÂU TRẢ LỜI (CÓ Ổ KHÓA)
             st.subheader("📬 Hòm Thư Phản Hồi Cá Nhân")
             st.info("🔐 Nhập đúng Họ Tên/MSSV em đã dùng để gửi câu hỏi để xem Giảng viên trả lời (Bảo mật 1-1).")
             
-            # Ô nhập chìa khóa (Có thể dùng type="password" để che chữ nếu cần)
             chia_khoa = st.text_input("Nhập Họ Tên/MSSV để mở khóa hòm thư:")
             
             if chia_khoa:
@@ -699,7 +854,6 @@ elif role == "Sinh viên":
                     df_hd_nhom = df_hd_sv[df_hd_sv['NhomID'] == nhom_id_ht]
                     
                     if not df_hd_nhom.empty:
-                        # BỘ LỌC BÍ MẬT: Chỉ lấy câu hỏi có Tên trùng khớp với ô tìm kiếm (Không phân biệt hoa thường)
                         df_ca_nhan = df_hd_nhom[df_hd_nhom['TenSinhVien'].astype(str).str.lower() == chia_khoa.strip().lower()]
                         
                         if not df_ca_nhan.empty:
@@ -717,7 +871,6 @@ elif role == "Sinh viên":
                 else:
                     st.info("Hệ thống chưa có dữ liệu hỏi đáp.")
             
-            # Lịch hẹn
             st.subheader("📅 Lịch hẹn báo cáo sắp tới")
             df_lich = pd.DataFrame(ws_lichhen.get_all_records())
             if not df_lich.empty:
@@ -725,7 +878,6 @@ elif role == "Sinh viên":
                 if not lich_nhom.empty: st.table(lich_nhom[['ThoiGian', 'DiaDiem', 'TrangThai']])
                 else: st.info("Chưa có lịch hẹn nào.")
             
-            # Điểm số Rubric
             st.write("---")
             st.subheader("🎯 Bảng điểm tổng kết")
             df_dg = pd.DataFrame(ws_danhgia.get_all_records())
